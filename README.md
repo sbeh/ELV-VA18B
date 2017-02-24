@@ -29,7 +29,7 @@ Connect your multimeter to the PC and just run 'multimeter' without any argument
 |-------:|:-----|
 | 1st    | passed seconds since the acquisition has started |
 | 2nd    | measured value |
-| 3rd    | unit: [u\|k\|m\|M] (%\|Ohm\|A\|V\|Hz\|C) |
+| 3rd    | unit: \[u\|k\|m\|M\] (%\|Ohm\|A\|V\|Hz\|C) |
 | 4th    | flags: AC, DC, auto, diode_test, cont_check, rel, hold, min, max |
 
 To stop the acquisition press Control-C. To write the data to a file, you have to redirect stdout accordingly.
