@@ -18,6 +18,7 @@ So far the software has only been tested with a V&A VA18B on Linux, but chances 
 ## Installation
 
 You do not need to, but you might want to install the tool system-wide:
+
 `$ sudo make install`
 
 ## Usage
@@ -25,7 +26,7 @@ You do not need to, but you might want to install the tool system-wide:
 Connect your multimeter to the PC and just run 'multimeter' without any argument. As soon as you put the multimeter in the PC-LINK mode, the data acquisition tool will start to dump the measured values along some other data:
 
 | column | data |
-|-------:|------|
+|-------:|:-----|
 | 1st    | passed seconds since the acquisition has started |
 | 2nd    | measured value |
 | 3rd    | unit: [u|k|m|M] (%|Ohm|A|V|Hz|C) |
@@ -39,5 +40,7 @@ Note: you can leave your multimeter in the PC-LINK mode, while running 'multimet
 
 ## Example
 `$ multimeter > test.dat`
+
 And if you want to log the data of two multimeters in two different files at the same time:
+
 `$ multimeter > test1.dat & multimeter /dev/ttyUSB1 > test2.dat`
