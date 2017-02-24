@@ -30,14 +30,14 @@ use Time::HiRes qw(gettimeofday);
 # Set terminal parameters of the TTY that the optocoupler is connected to
 #
 sub init_tty {
-	my $fd = fileno(shift);
-	my $termios = POSIX::Termios->new();
+        my $fd = fileno(shift);
+        my $termios = POSIX::Termios->new();
 
-	$termios->getattr($fd) or die "Can't get terminal parameters for $dev";
-	$termios->setispeed(B2400);
-	$termios->setiflag(0);
-	$termios->setlflag(0);
-	$termios->setattr($fd, TCSANOW);
+        $termios->getattr($fd) or die "Can't get terminal parameters for $dev";
+        $termios->setispeed(B2400);
+        $termios->setiflag(0);
+        $termios->setlflag(0);
+        $termios->setattr($fd, TCSANOW);
 }
 
 
@@ -45,15 +45,15 @@ sub init_tty {
 # Read next (complete) binary string from the optocoupler
 #
 sub next_bin_str {
-	my $bin_str;
-	while (!eof(USB_TTY) and length($bin_str) != 14 * 4) {
-		my $byte = getc(USB_TTY);
-		my $nibble_number = ord($byte) >> 4 & 0xf;
-		
-		$bin_str .= substr(unpack("B*", $byte), 4);
-		length($bin_str) == $nibble_number * 4 or $bin_str = "";
-	}
-	$bin_str;
+        my $bin_str;
+        while (!eof(USB_TTY) and length($bin_str) != 15 * 4) {
+                my $byte = getc(USB_TTY);
+                my $nibble_number = ord($byte) >> 4 & 0xf;
+
+                $bin_str .= substr(unpack("B*", $byte), 4);
+                length($bin_str) == $nibble_number * 4 or $bin_str = "";
+        }
+        $bin_str;
 }
 
 
@@ -61,56 +61,73 @@ sub next_bin_str {
 # Decode the measured data from the binary string
 #
 sub decode_bin_str {
-	my ($AC, $DC, $auto, $unknown1,
-	    $minus, $digi1, $dot1, $digi2, $dot2, $digi3, $dot3, $digi4,
-	    $micro, $unknown2, $kilo, $diode_test,
-	    $milli, $percent, $mega, $cont_check,
-	    $unknown3, $ohm, $rel, $hold,
-	    $amp, $volt, $hz, $unknown4,
-	    $min, $unknown5, $celsius, $max) = shift =~
-    	   /^(.)(.)(.)(.)(.)(.{7})(.)(.{7})(.)(.{7})(.)(.{7})
-	    (.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.) *$/x;
-	
-	my %digi = (
-		"1111101" => 0,
-		"0000101" => 1,
-		"1011011" => 2,
-		"0011111" => 3,
-		"0100111" => 4,
-		"0111110" => 5,
-		"1111110" => 6,
-		"0010101" => 7,
-		"1111111" => 8,
-		"0111111" => 9,
-	);
+        my ($u, $auto, $DC, $AC,
+            $digi1, $digi2, $digi3, $digi4,
+            $diode_test, $u, $nano, $micro,
+            $cont_check, $mega, $percent, $milli,
+            $u, $rel, $ohm, $cap,
+            $u, $hz, $volt, $amp,
+            $u, $u, $celsius, $fahrenheit,
+            $max, $u, $min, $u) = shift =~
+          /^(.)(.)(.)(.)(.{8})(.{8})(.{8})(.{8})
+            (.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.)(.) *$/x;
 
-	my $val = ($minus ? "-" : "") . $digi{$digi1} . ($dot1 ? "." : "") .
-					$digi{$digi2} . ($dot2 ? "." : "") .
-					$digi{$digi3} . ($dot3 ? "." : "") .
-					$digi{$digi4};
-	
-	my $flags = join(" ", $AC         ? "AC"         : (),
-			      $DC         ? "DC"         : (),
-			      $auto       ? "auto"       : (),
-			      $diode_test ? "diode_test" : (),
-			      $cont_check ? "cont_check" : (),
-			      $rel        ? "rel"        : (),
-			      $hold       ? "hold"       : (),
-			      $min        ? "min"        : (),
-			      $max        ? "max"        : ());
-	
-	my $unit = ($micro   ? "u"   : "") .
-		   ($kilo    ? "k"   : "") .
-		   ($milli   ? "m"   : "") .
-		   ($mega    ? "M"   : "") .
-		   ($percent ? "%"   : "") .
-		   ($ohm     ? "Ohm" : "") .
-		   ($amp     ? "A"   : "") .
-		   ($volt    ? "V"   : "") .
-		   ($hz      ? "Hz"  : "") .
-		   ($celsius ? "C"   : "");
+        my %digi = (
+                "11101011" => "0",
+                "11111011" => ".0",
+                "00001010" => "1",
+                "00011010" => ".1",
+                "10101101" => "2",
+                "10111101" => ".2",
+                "10001111" => "3",
+                "10011111" => ".3",
+                "01001110" => "4",
+                "01011110" => ".4",
+                "11000111" => "5",
+                "11010111" => ".5",
+                "11100111" => "6",
+                "11110111" => ".6",
+                "10001010" => "7",
+                "10011010" => ".7",
+                "11101111" => "8",
+                "11111111" => ".8",
+                "11001111" => "9",
+                "11011111" => ".9",
+        );
 
-	$val, $flags, $unit;
+        my $val = $digi{$digi1} .
+                  $digi{$digi2} .
+                  $digi{$digi3} .
+                  $digi{$digi4};
+
+        substr($val, 0, 1) == "." or substr($val, 0, 1) = "-";
+
+        my $flags = join(" ", $AC         ? "AC"         : (),
+                              $DC         ? "DC"         : (),
+                              $auto       ? "auto"       : (),
+                              $diode_test ? "diode_test" : (),
+                              $cont_check ? "cont_check" : (),
+                              $rel        ? "rel"        : (),
+                              $hold       ? "hold"       : (),
+                              $min        ? "min"        : (),
+                              $max        ? "max"        : ());
+
+        my $unit = ($pico       ? "p"   : "") .
+                   ($nano       ? "n"   : "") .
+                   ($micro      ? "u"   : "") .
+                   ($milli      ? "m"   : "") .
+                   ($kilo       ? "k"   : "") .
+                   ($mega       ? "M"   : "") .
+                   ($percent    ? "%"   : "") .
+                   ($ohm        ? "Ohm" : "") .
+                   ($amp        ? "A"   : "") .
+                   ($volt       ? "V"   : "") .
+                   ($hz         ? "Hz"  : "") .
+                   ($celsius    ? "°C"   : "") .
+                   ($fahrenheit ? "°F"   : "") .
+                   ($cap        ? "F"   : "");
+
+        $val, $flags, $unit;
 }
 
 
@@ -126,13 +143,23 @@ $| = 1;
 
 my $last_timestamp;
 
+#while ($bin_str = next_bin_str) {
+#       printf "%s\n", $bin_str;
+#}
+
+my $last_val;
+
 while ($bin_str = next_bin_str) {
-	my ($val, $flags, $unit) = decode_bin_str($bin_str);
+        my ($val, $flags, $unit) = decode_bin_str($bin_str);
 
-	$last_timestamp ||= gettimeofday;
-	my $timestamp = gettimeofday;
+        $val == $last_val and next;
 
-	printf "%7.2f\t%9.3f\t%s\t%s\n", $timestamp - $last_timestamp,
-					 $val, $unit, $flags;
-	# $last_timestamp = $timestamp;
+        $last_timestamp ||= gettimeofday;
+        my $timestamp = gettimeofday;
+
+#       printf "%s\t%s\n", $bin_str, $val;
+        printf "%7.2f\t%9.3f\t%s\t%s\n", $timestamp - $last_timestamp,
+                                         $val, $unit, $flags;
+        # $last_timestamp = $timestamp;
+        $last_val = $val;
 }
